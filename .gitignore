@@ -1,0 +1,37 @@
+# Entornos virtuales
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Archivos de entorno
+.env
+.env.local
+
+# ChromaDB (muy pesado, se regenera)
+chroma_db/
+
+# Logs
+*.log
+
+# Archivos temporales
+*.tmp
+*.bak
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# CSV con datos sensibles (opcional)
+# evaluaciones_con_departamentos.csv

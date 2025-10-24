@@ -1,8 +1,9 @@
-torch
-transformers
-accelerate
-bitsandbytes
-peft
-sentence-transformers
-chromadb
-gradio
+torch==2.3.0
+transformers==4.41.2
+accelerate==0.31.0
+bitsandbytes==0.43.1
+peft==0.11.1
+sentence-transformers==3.0.1
+chromadb==0.5.0
+gradio==4.31.0
+numpy<2.0.0
