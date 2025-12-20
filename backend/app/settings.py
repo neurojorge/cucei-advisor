@@ -20,6 +20,12 @@ class Settings:
         except (TypeError, ValueError):
             return default
 
+    def _bool_env(name: str, default: bool) -> bool:
+        value = os.environ.get(name)
+        if value is None:
+            return default
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
     offer_data_parquet: str | None = os.environ.get("OFFER_DATA_PARQUET")
     offer_data_csv: str | None = os.environ.get("OFFER_DATA_CSV")
     plan_csv_path: str = os.environ.get(
@@ -39,3 +45,4 @@ class Settings:
     )
     api_origin: str = os.environ.get("API_ORIGIN", "http://localhost:5173")
     evidence_quote_max_len: int = _int_env("EVIDENCE_QUOTE_MAX_LEN", 320)
+    require_groq_summary: bool = _bool_env("REQUIRE_GROQ_SUMMARY", False)

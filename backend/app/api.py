@@ -155,6 +155,7 @@ def reviews(
             {},
             cache_key=normalize_professor_name(profesor),
             cache_dir=settings.cache_dir,
+            require_groq=settings.require_groq_summary,
         )
         return ReviewsResponse(
             profesor=profesor,
@@ -181,6 +182,7 @@ def reviews(
         tags,
         cache_key=matched,
         cache_dir=settings.cache_dir,
+        require_groq=settings.require_groq_summary,
     )
     bullets_raw = summarize_reviews(features.get("comments", [])[:20], features, use_groq=False)
     reviews_clean, total_count, unique_count = dedupe_and_clean_reviews(features.get("comments", []))

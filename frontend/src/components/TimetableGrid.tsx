@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 
-import type { ScheduleClass } from "../api/client"
+import type { Schedule, ScheduleClass } from "../api/client"
 import { cn } from "../lib/utils"
 import { Badge } from "./ui/badge"
 
@@ -13,7 +13,7 @@ const STEP = 30
 const rowCount = ((MAX_HOUR - MIN_HOUR) * 60) / STEP
 
 type TimetableGridProps = {
-  classes: ScheduleClass[]
+  schedule: Schedule
   onSelect: (cls: ScheduleClass) => void
   selectedKey?: string | null
 }
@@ -153,7 +153,8 @@ function buildPositions(meetings: NormalizedMeeting[]): PositionedMeeting[] {
   return positions
 }
 
-function TimetableGrid({ classes, onSelect, selectedKey }: TimetableGridProps) {
+function TimetableGrid({ schedule, onSelect, selectedKey }: TimetableGridProps) {
+  const classes = schedule.classes
   const dayIndex = useMemo(() => new Map(DAY_ORDER.map((day, idx) => [day, idx])), [])
   const normalizedMeetings = useMemo(
     () => classes.flatMap((cls) => buildMeetingsForClass(cls)),

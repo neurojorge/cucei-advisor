@@ -103,11 +103,13 @@ class ReviewItem(BaseModel):
 
 
 class ReviewSummary(BaseModel):
-    summary: str
-    pros: List[str]
-    cons: List[str]
-    confidence: int
-    tags: dict
+    summary_text: str = ""
+    pros: List[str] = Field(default_factory=list)
+    contras: List[str] = Field(default_factory=list)
+    confidence: int = 0
+    tags: dict = Field(default_factory=dict)
+    summary: str | None = None
+    cons: List[str] | None = None
 
 
 class ReviewsResponse(BaseModel):

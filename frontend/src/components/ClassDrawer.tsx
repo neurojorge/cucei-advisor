@@ -38,6 +38,7 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
   const [originalsLoading, setOriginalsLoading] = useState(false)
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [openReviewIndex, setOpenReviewIndex] = useState<number | null>(null)
+  const [pointsOpen, setPointsOpen] = useState(false)
 
   useEffect(() => {
     if (!open || !selectedClass) return
@@ -49,6 +50,7 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
     setOriginalsLoading(false)
     setActiveTag(null)
     setOpenReviewIndex(null)
+    setPointsOpen(false)
     fetchReviews(selectedClass.profesor, { limit: 20 })
       .then((data) => setReviews(data))
       .catch((err: Error) => setError(err.message))
@@ -58,6 +60,9 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
   const summary = reviews?.summary_generated
   const summaryTags = summary?.tags ?? reviews?.tags ?? {}
   const summaryTagKeys = TAG_ORDER.filter((tag) => (summaryTags[tag] ?? 0) > 0)
+  const summaryText = summary?.summary_text || summary?.summary || ""
+  const summaryPros = summary?.pros ?? []
+  const summaryContras = summary?.contras ?? summary?.cons ?? []
 
   const cupoLabel = formatCupo(selectedClass?.cupo ?? null, selectedClass?.disponibles ?? null)
   const meetings = useMemo(() => buildMeetings(selectedClass), [selectedClass])
@@ -95,7 +100,7 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
         <Tabs defaultValue="detalle" className="space-y-4">
           <TabsList>
             <TabsTrigger value="detalle">Detalle</TabsTrigger>
-            <TabsTrigger value="resenas">Resenas</TabsTrigger>
+            <TabsTrigger value="reseñas">Reseñas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="detalle" className="space-y-4">
@@ -153,7 +158,7 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
             </div>
           </TabsContent>
 
-          <TabsContent value="resenas" className="space-y-4">
+          <TabsContent value="reseñas" className="space-y-4">
             {loading && (
               <div className="space-y-3">
                 <Skeleton className="h-6 w-1/2" />
@@ -170,8 +175,8 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
                       <Badge variant="default">confianza {summary.confidence}%</Badge>
                     )}
                   </div>
-                  {summary?.summary ? (
-                    <p className="text-sm text-ink/70">{summary.summary}</p>
+                  {summaryText ? (
+                    <p className="text-sm leading-relaxed text-ink/70 whitespace-pre-line">{summaryText}</p>
                   ) : (
                     <div className="rounded-xl border border-line bg-fog p-3 text-xs text-ink/60">
                       Sin resumen disponible.
@@ -209,25 +214,34 @@ function ClassDrawer({ open, onOpenChange, selectedClass }: ClassDrawerProps) {
                     </div>
                   )}
 
-                  {(summary?.pros?.length || summary?.cons?.length) && (
-                    <div className="grid gap-3 text-xs text-ink/70 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <div className="text-[11px] uppercase tracking-[0.2em] text-ink/40">Pros</div>
-                        <ul className="space-y-1">
-                          {(summary?.pros || []).map((item, idx) => (
-                            <li key={`${item}-${idx}`}>• {item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-[11px] uppercase tracking-[0.2em] text-ink/40">Contras</div>
-                        <ul className="space-y-1">
-                          {(summary?.cons || []).map((item, idx) => (
-                            <li key={`${item}-${idx}`}>• {item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                  {(summaryPros.length || summaryContras.length) && (
+                    <Collapsible open={pointsOpen} onOpenChange={setPointsOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button type="button" variant="outline" size="sm">
+                          {pointsOpen ? "Ocultar puntos" : "Ver puntos"}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-3 grid gap-3 text-xs text-ink/70 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-ink/40">Pros</div>
+                            <ul className="space-y-1">
+                              {summaryPros.map((item, idx) => (
+                                <li key={`${item}-${idx}`}>• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-ink/40">Contras</div>
+                            <ul className="space-y-1">
+                              {summaryContras.map((item, idx) => (
+                                <li key={`${item}-${idx}`}>• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                 </div>
 

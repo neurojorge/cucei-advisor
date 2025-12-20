@@ -110,9 +110,11 @@ export type ReviewsResponse = {
 }
 
 export type ReviewSummary = {
-  summary: string
-  pros: string[]
-  cons: string[]
+  summary_text: string
+  pros?: string[]
+  contras?: string[]
+  summary?: string
+  cons?: string[]
   confidence: number
   tags: Record<string, number>
 }

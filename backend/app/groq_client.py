@@ -25,10 +25,10 @@ def _groq_prompt(reviews: List[str]) -> str:
 
 def _groq_summary_prompt(reviews: List[str]) -> str:
     return (
-        "Eres un asistente que resume reseñas reales de estudiantes. "
-        "Devuelve JSON estricto con summary, pros, cons y confidence (0-100). "
-        "summary debe tener maximo 80 palabras.\n"
-        '{"summary":"...","pros":["..."],"cons":["..."],"confidence":80}\n'
+        "Redacta un resumen breve (2-4 oraciones) de reseñas de un profesor universitario. "
+        "Español neutro con acentos correctos. No uses viñetas. "
+        "Incluye 1-2 pros y 1-2 contras dentro del texto.\n"
+        'Responde SOLO JSON estricto con: {"summary_text":"...","pros":["..."],"contras":["..."],"confidence":80}\n'
         "Usa solo las reseñas provistas. No inventes datos.\n"
         "Reseñas:\n- "
         + "\n- ".join(reviews[:30])
@@ -53,6 +53,16 @@ def _trim_words(text: str, limit: int) -> str:
     if len(words) <= limit:
         return " ".join(words)
     return " ".join(words[:limit]).rstrip() + "..."
+
+
+def _trim_sentences(text: str, max_sentences: int) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+    if len(parts) <= max_sentences:
+        return " ".join(parts)
+    return " ".join(parts[:max_sentences]).rstrip()
 
 
 def _normalize_list(values: object, max_items: int = 5) -> List[str]:
@@ -157,7 +167,10 @@ def summarize_reviews_with_groq(reviews: List[str]) -> Dict[str, object]:
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "Genera un resumen conciso basado solo en el texto dado."},
+                {
+                    "role": "system",
+                    "content": "Redacta un resumen breve en español neutro con acentos correctos, usando solo el texto dado.",
+                },
                 {"role": "user", "content": _groq_summary_prompt(reviews)},
             ],
             temperature=0.2,
@@ -167,21 +180,27 @@ def summarize_reviews_with_groq(reviews: List[str]) -> Dict[str, object]:
         data = _safe_json(content or "")
         if not data:
             return {}
-        summary = _trim_words(data.get("summary", ""), 80)
+        summary_text = data.get("summary_text", "") or data.get("summary", "")
+        summary_text = _trim_sentences(summary_text, 4)
+        if not summary_text:
+            summary_text = _trim_words(summary_text, 80)
         pros = _normalize_list(data.get("pros", []))
-        cons = _normalize_list(data.get("cons", []))
+        contras = _normalize_list(data.get("contras", []))
+        if not contras:
+            contras = _normalize_list(data.get("cons", []))
         try:
             confidence = int(float(data.get("confidence", 0)))
         except Exception:
             confidence = 0
         confidence = max(0, min(100, confidence))
-        if not summary:
+        if not summary_text:
             return {}
         return {
-            "summary": summary,
+            "summary_text": summary_text,
             "pros": pros,
-            "cons": cons,
+            "contras": contras,
             "confidence": confidence,
+            "source": "groq",
         }
     except Exception:
         return {}
@@ -190,31 +209,43 @@ def summarize_reviews_with_groq(reviews: List[str]) -> Dict[str, object]:
 def fallback_summary_generated(features: dict) -> Dict[str, object]:
     total = int(features.get("total", 0) or 0)
     if total <= 0:
-        return {"summary": "Sin reseñas disponibles.", "pros": [], "cons": [], "confidence": 0}
+        return {
+            "summary_text": "Sin reseñas disponibles.",
+            "pros": [],
+            "contras": [],
+            "confidence": 0,
+            "source": "fallback",
+        }
     pros: List[str] = []
-    cons: List[str] = []
+    contras: List[str] = []
     if features.get("claridad", 0):
-        pros.append("Explicacion clara")
+        pros.append("Explicación clara")
     if features.get("barco", 0) > features.get("exigente", 0):
-        pros.append("Evaluacion flexible")
+        pros.append("Evaluación flexible")
     if features.get("aprendizaje", 0):
         pros.append("Se aprende en clase")
     if features.get("exigente", 0):
-        cons.append("Puede ser exigente")
+        contras.append("Puede ser exigente")
     if features.get("tareas", 0):
-        cons.append("Carga de tareas")
+        contras.append("Carga de tareas")
     if features.get("examenes", 0):
-        cons.append("Examenes frecuentes")
+        contras.append("Exámenes frecuentes")
     pros = pros[:3]
-    cons = cons[:3]
-    parts = [f"{total} reseñas analizadas."]
+    contras = contras[:3]
+    parts = [f"Se analizaron {total} reseñas del profesor."]
     if pros:
-        parts.append("Pros: " + ", ".join(pros[:2]) + ".")
-    if cons:
-        parts.append("Contras: " + ", ".join(cons[:2]) + ".")
-    summary = _trim_words(" ".join(parts), 80)
+        parts.append("Se valora " + ", ".join(pros[:2]).lower() + ".")
+    if contras:
+        parts.append("Como puntos a mejorar se mencionan " + ", ".join(contras[:2]).lower() + ".")
+    summary_text = _trim_sentences(" ".join(parts), 4)
     confidence = min(100, max(20, total * 6))
-    return {"summary": summary, "pros": pros, "cons": cons, "confidence": confidence}
+    return {
+        "summary_text": summary_text,
+        "pros": pros,
+        "contras": contras,
+        "confidence": confidence,
+        "source": "fallback",
+    }
 
 
 def build_summary_generated(
@@ -224,17 +255,41 @@ def build_summary_generated(
     cache_key: str,
     cache_dir: str | None = None,
     ttl_seconds: int = SUMMARY_TTL_SECONDS,
+    require_groq: bool = False,
 ) -> Dict[str, object]:
     key = _normalize_cache_key(cache_key)
     cached = _read_summary_cache(cache_dir, key, ttl_seconds)
-    if cached:
+    if cached and (not require_groq or cached.get("source") == "groq"):
+        if "summary_text" not in cached and "summary" in cached:
+            cached["summary_text"] = cached.get("summary", "")
+        if "contras" not in cached and "cons" in cached:
+            cached["contras"] = cached.get("cons", [])
         cached["tags"] = tags
         return cached
+    if require_groq and not os.environ.get("GROQ_API_KEY"):
+        return {
+            "summary_text": "Resumen no disponible: configura GROQ_API_KEY.",
+            "pros": [],
+            "contras": [],
+            "confidence": 0,
+            "tags": tags,
+            "source": "missing",
+        }
     summary = summarize_reviews_with_groq(reviews)
     if not summary:
+        if require_groq:
+            return {
+                "summary_text": "Resumen no disponible: no se pudo generar con Groq.",
+                "pros": [],
+                "contras": [],
+                "confidence": 0,
+                "tags": tags,
+                "source": "error",
+            }
         summary = fallback_summary_generated(features)
     summary["tags"] = tags
-    _write_summary_cache(cache_dir, key, summary)
+    if summary.get("source") in {"groq", "fallback"}:
+        _write_summary_cache(cache_dir, key, summary)
     return summary
 
 
@@ -252,14 +307,14 @@ def fallback_summary(features: dict) -> List[Dict[str, str]]:
     if features.get("aprendizaje", 0):
         bullets.append(
             {
-                "claim": f"Enfasis en aprendizaje: {features['aprendizaje']} menciones",
-                "evidence_quote": comments[1] if len(comments) > 1 else "",
-            }
-        )
+            "claim": f"Énfasis en aprendizaje: {features['aprendizaje']} menciones",
+            "evidence_quote": comments[1] if len(comments) > 1 else "",
+        }
+    )
     if features.get("claridad", 0):
         bullets.append(
             {
-                "claim": f"Claridad/explicacion mencionada {features['claridad']} veces",
+                "claim": f"Claridad/explicación mencionada {features['claridad']} veces",
                 "evidence_quote": comments[2] if len(comments) > 2 else "",
             }
         )

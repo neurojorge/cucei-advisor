@@ -212,7 +212,7 @@ function Wizard() {
             )}
             {selectedSchedule && (
               <TimetableGrid
-                classes={selectedSchedule.classes}
+                schedule={selectedSchedule}
                 onSelect={handleSelectClass}
                 selectedKey={selectedClass?.nrc || null}
               />
@@ -249,7 +249,7 @@ function Wizard() {
 
             {selectedSchedule && (
               <TimetableGrid
-                classes={selectedSchedule.classes}
+                schedule={selectedSchedule}
                 onSelect={handleSelectClass}
                 selectedKey={selectedClass?.nrc || null}
               />
