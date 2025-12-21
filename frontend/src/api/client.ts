@@ -103,6 +103,7 @@ export type ReviewsResponse = {
   tags: Record<string, number>
   bullets: ReviewBullet[]
   summary_generated?: ReviewSummary | null
+  summary_long?: string
   reviews_total_count: number
   reviews_unique_count: number
   reviews: ReviewItem[]
@@ -155,8 +156,4 @@ export function fetchReviews(
   return http<ReviewsResponse>(
     `/api/reviews?profesor=${encodeURIComponent(profesor)}&limit=${limit}&include_raw=${includeRaw}`
   )
-}
-
-export function schedulePngUrl(scheduleId: string) {
-  return `${API_BASE}/api/schedule/${scheduleId}/png`
 }

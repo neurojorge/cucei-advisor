@@ -12,7 +12,6 @@ import {
 } from "../api/client"
 import ClassDrawer from "../components/ClassDrawer"
 import CopyNrcButton from "../components/CopyNrcButton"
-import ExportPngButton from "../components/ExportPngButton"
 import PreferencesForm, { type PreferencesValues } from "../components/PreferencesForm"
 import SchedulesCarousel from "../components/SchedulesCarousel"
 import Stepper from "../components/Stepper"
@@ -225,7 +224,7 @@ function Wizard() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">Paso 3: Confirmacion</h2>
-                <p className="text-sm text-ink/60">Copia NRCs o exporta PNG.</p>
+                <p className="text-sm text-ink/60">Copia los NRCs para inscribir.</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleBack}>
@@ -238,11 +237,10 @@ function Wizard() {
               <CardContent className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold">Acciones rapidas</h3>
-                  <p className="text-xs text-ink/60">Copia NRCs o exporta PNG.</p>
+                  <p className="text-xs text-ink/60">Copia los NRCs en un clic.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <CopyNrcButton classes={selectedSchedule?.classes || []} />
-                  <ExportPngButton scheduleId={selectedScheduleId} />
                 </div>
               </CardContent>
             </Card>

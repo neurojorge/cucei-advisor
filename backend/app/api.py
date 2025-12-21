@@ -2,25 +2,21 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query
 
 from .data_access import get_offer, get_plan, get_reviews
-from .groq_client import build_summary_generated, summarize_reviews
+from .groq_client import build_summary_generated, build_summary_long, summarize_reviews
 from .models import GenerateRequest, GenerateResponse, HealthResponse, MetaResponse, PlanResponse, ReviewsResponse
 from .plan_loader import get_semester_keys, get_semester_materias, semestres_disponibles
 from .professor_match import load_aliases, match_professor, normalize_professor_name
-from .render_schedule import render_schedule_png
 from .reviews_features import compute_features, dedupe_and_clean_reviews, extract_tags
 from .scheduler import build_top_schedules
 from .settings import Settings
 
 router = APIRouter(prefix="/api")
 settings = Settings()
-
-SCHEDULE_STORE: Dict[str, Dict] = {}
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -117,7 +113,6 @@ def generate(payload: GenerateRequest) -> GenerateResponse:
     for schedule in schedules:
         schedule_id = uuid4().hex[:8]
         schedule["schedule_id"] = schedule_id
-        SCHEDULE_STORE[schedule_id] = schedule
         result.append(schedule)
 
     return GenerateResponse(
@@ -126,19 +121,6 @@ def generate(payload: GenerateRequest) -> GenerateResponse:
         offer_avail_nonzero_pct=offer_avail_nonzero_pct,
         diagnostic_bullets=diagnostic_bullets,
     )
-
-
-@router.get("/schedule/{schedule_id}/png")
-def schedule_png(schedule_id: str) -> Response:
-    schedule = SCHEDULE_STORE.get(schedule_id)
-    if not schedule:
-        raise HTTPException(status_code=404, detail="Horario no encontrado")
-    cache_path = Path(settings.cache_dir) / f"{schedule_id}.png"
-    if cache_path.exists():
-        content = cache_path.read_bytes()
-    else:
-        content = render_schedule_png(schedule, settings.cache_dir)
-    return Response(content=content, media_type="image/png")
 
 
 @router.get("/reviews", response_model=ReviewsResponse)
@@ -157,6 +139,15 @@ def reviews(
             cache_dir=settings.cache_dir,
             require_groq=settings.require_groq_summary,
         )
+        summary_long = build_summary_long(
+            [],
+            {"total": 0, "comments": []},
+            profesor,
+            cache_key=normalize_professor_name(profesor),
+            cache_dir=settings.cache_dir,
+            ttl_seconds=settings.reviews_summary_long_ttl_hours * 3600,
+            require_groq=settings.require_groq_summary,
+        )
         return ReviewsResponse(
             profesor=profesor,
             normalized=normalize_professor_name(profesor),
@@ -164,6 +155,7 @@ def reviews(
             tags={},
             bullets=[{"claim": "Sin reseñas disponibles.", "evidence_quote": "", "evidence_truncated": False}],
             summary_generated=summary_generated,
+            summary_long=summary_long.get("summary_long", ""),
             reviews_total_count=0,
             reviews_unique_count=0,
             reviews=[],
@@ -182,6 +174,15 @@ def reviews(
         tags,
         cache_key=matched,
         cache_dir=settings.cache_dir,
+        require_groq=settings.require_groq_summary,
+    )
+    summary_long = build_summary_long(
+        features.get("comments", []),
+        features,
+        matched,
+        cache_key=matched,
+        cache_dir=settings.cache_dir,
+        ttl_seconds=settings.reviews_summary_long_ttl_hours * 3600,
         require_groq=settings.require_groq_summary,
     )
     bullets_raw = summarize_reviews(features.get("comments", [])[:20], features, use_groq=False)
@@ -212,6 +213,7 @@ def reviews(
         tags=tags,
         bullets=bullets,
         summary_generated=summary_generated,
+        summary_long=summary_long.get("summary_long", ""),
         reviews_total_count=total_count,
         reviews_unique_count=unique_count,
         reviews=reviews_list,

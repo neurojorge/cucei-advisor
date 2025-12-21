@@ -5,5 +5,4 @@ pyarrow
 numpy
 rapidfuzz
 python-dotenv
-matplotlib
 groq
