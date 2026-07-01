@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pandas
+pyarrow
+numpy
+rapidfuzz
+python-dotenv
+groq

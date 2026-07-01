@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --ink: 220 20% 10%;
+  --fog: 210 22% 96%;
+  --line: 210 16% 85%;
+  --accent: 220 12% 22%;
+  --accent-2: 210 10% 60%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: hsl(var(--ink));
+  background:
+    radial-gradient(circle at 10% 10%, rgba(15, 23, 42, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(15, 23, 42, 0.05), transparent 40%),
+    linear-gradient(180deg, #f7f7f7 0%, #ffffff 60%);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.grid-soft {
+  background-image: linear-gradient(to right, rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.fade-up {
+  animation: fade-up 0.5s ease-out forwards;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    padding: 24px 16px 60px;
+  }
+}
